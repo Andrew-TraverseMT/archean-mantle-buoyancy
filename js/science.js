@@ -291,7 +291,7 @@
       vol,
       dRhoTotal,
       dRhoVsAsth,
-      buoyant: dRhoTotal < -1e-5,
+      buoyant: dRhoTotal < -0.002,
       equivHeatingC,
       leeRho,
       leeContrast,

@@ -66,6 +66,16 @@ assert.ok(archean.rhoResidue < modern.rhoResidue, "Archean residue less dense");
 assert.ok(Math.abs(archean.dRhoVol) < Math.abs(archean.dRhoDepl), "volatiles secondary to depletion");
 assert.ok(archean.buoyant, "Archean residue compositionally buoyant");
 
+const undepleted = M.evaluate({
+  Tp: M.TP_MODERN_C,
+  Pfinal: 1,
+  Fmanual: 0,
+  useManualF: true,
+  h2oPpm: 25,
+  co2Ppm: 20
+});
+assert.ok(!undepleted.buoyant, "near-zero melt is not compositionally buoyant");
+
 console.log("All science tests passed.");
 console.log("  modern F =", modern.F.toFixed(3), "ρ =", modern.rhoResidue.toFixed(4), "Δρ/ρ =", (modern.dRhoTotal * 100).toFixed(2) + "%");
 console.log("  archean F =", archean.F.toFixed(3), "ρ =", archean.rhoResidue.toFixed(4), "Δρ/ρ =", (archean.dRhoTotal * 100).toFixed(2) + "%");

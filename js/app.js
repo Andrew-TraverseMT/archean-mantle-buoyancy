@@ -26,6 +26,7 @@
     fval: $("fval"),
     heat: $("heat"),
     lee: $("lee"),
+    flag: $("flag"),
     modernBox: $("modern-box"),
     archeanBox: $("archean-box"),
     chart: $("chart")
@@ -61,7 +62,7 @@
 
   function verdictFor(model) {
     const pct = -model.dRhoTotal * 100;
-    if (!model.buoyant) {
+    if (!model.buoyant || pct < 0.2) {
       return {
         cls: "bad",
         title: "Not compositionally buoyant",
@@ -89,8 +90,8 @@
       <p>T<sub>P</sub> ${model.Tp} °C · F ${fmt(model.F * 100, 1)}% · Mg# ${fmt(model.mgNum, 1)}</p>
       <p><strong>${fmt(model.rhoResidue, 3)} g cm⁻³</strong> · Δρ/ρ ${fmt(pct, 2)}%</p>
       <div class="bar" aria-hidden="true">
-        <i class="depl" style="width:${Math.min(100, Math.abs(model.dRhoDepl) * 4000)}%"></i>
-        <i class="vol" style="width:${Math.min(20, Math.abs(model.dRhoVol) * 4000)}%"></i>
+        <i class="depl" style="flex:0 0 ${Math.min(100, Math.abs(model.dRhoDepl) * 4000)}%"></i>
+        <i class="vol" style="flex:0 0 ${Math.min(20, Math.abs(model.dRhoVol) * 4000)}%"></i>
       </div>
       <p class="hint">Olive: melt depletion. Copper: remaining volatiles (small).</p>
     `;
@@ -184,6 +185,9 @@
     els.rho.textContent = fmt(model.rhoResidue, 3);
     els.contrast.textContent = fmt(model.dRhoTotal * 100, 2) + "%";
     els.mgnum.textContent = fmt(model.mgNum, 2);
+    if (els.flag) {
+      els.flag.textContent = model.buoyant ? "Yes" : "No";
+    }
     els.fval.textContent = fmt(model.F * 100, 1) + "%";
     els.heat.textContent = fmt(model.equivHeatingC, 0) + " °C";
     els.lee.textContent = fmt(model.leeContrast * 100, 2) + "%";
@@ -214,9 +218,13 @@
   }
 
   ["input", "change"].forEach((evt) => {
-    [els.tp, els.depth, els.melt, els.devol, els.manualF].forEach((el) => {
+    [els.tp, els.depth, els.devol, els.manualF].forEach((el) => {
       el.addEventListener(evt, render);
     });
+  });
+  els.melt.addEventListener("input", () => {
+    els.manualF.checked = true;
+    render();
   });
   els.eraModern.addEventListener("click", () => setEra(M.TP_MODERN_C));
   els.eraArchean.addEventListener("click", () => setEra(M.TP_ARCHEAN_C));
