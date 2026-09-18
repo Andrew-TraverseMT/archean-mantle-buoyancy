@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Archean mantle buoyancy — a teaching demo</title>
+  <meta name="description" content="Interactive demo of how melt depletion and devolatilization change the density of mantle lithosphere, and why the Archean case is the important one.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="wrap">
+    <p class="kicker">Teaching demo · mantle lithosphere</p>
+    <h1>How melting made Archean mantle lithosphere buoyant</h1>
+    <p class="lede">
+      Partial melting strips iron, garnet, and clinopyroxene from peridotite. The residue is less dense
+      than fertile mantle, so a cold lithospheric column can stay afloat. That trick worked best in the
+      Archean, when the mantle was hotter, melting went further, and the leftover rock was more depleted.
+      Losing H<sub>2</sub>O and CO<sub>2</sub> matters far less for density than the melt itself.
+    </p>
+
+    <div class="grid">
+      <section class="card controls" aria-label="Controls">
+        <h2>Change the column</h2>
+        <div class="era">
+          <button type="button" id="era-modern">Modern · 1350 °C</button>
+          <button type="button" id="era-archean">Archean · 1550 °C</button>
+        </div>
+
+        <label class="ctrl">
+          <span class="row">Mantle potential temperature <strong id="tp-out"></strong></span>
+          <input id="tp" type="range" min="1280" max="1650" step="5" value="1550">
+          <p class="hint">Herzberg, Condie &amp; Korenaga (2010): modern ambient T<sub>P</sub> ≈ 1350 ± 50 °C; Archean peak ≈ 1500–1600 °C. Same lithosphere thickness in both cases.</p>
+        </label>
+
+        <label class="ctrl">
+          <span class="row">Top of the melting column <strong id="depth-out"></strong></span>
+          <input id="depth" type="range" min="15" max="90" step="5" value="30">
+          <p class="hint">Held fixed so Archean and modern are compared at the same lithosphere thickness. Pressure uses 30 km/GPa.</p>
+        </label>
+
+        <label class="ctrl">
+          <span class="row">Degree of melt depletion <strong id="melt-out"></strong></span>
+          <input id="melt" type="range" min="0" max="40" step="0.5" value="29">
+          <p class="hint" id="melt-hint"></p>
+        </label>
+        <label class="check">
+          <input id="manual-f" type="checkbox">
+          <span>Set melt fraction by hand (ignore the temperature calculation)</span>
+        </label>
+
+        <label class="ctrl">
+          <span class="row">Devolatilization, H<sub>2</sub>O + CO<sub>2</sub> <strong id="devol-out"></strong></span>
+          <input id="devol" type="range" min="0" max="100" step="5" value="80">
+          <p class="hint">
+            Starts from a fertile budget of 125 ppm H<sub>2</sub>O (Hirth &amp; Kohlstedt 1996) and
+            100 ppm CO<sub>2</sub> (Dasgupta &amp; Hirschmann 2010 scale).
+            <span id="h2o-out"></span>, <span id="co2-out"></span>.
+          </p>
+        </label>
+      </section>
+
+      <section class="card results" aria-label="Results">
+        <div id="verdict" class="verdict good"></div>
+        <div class="metrics">
+          <div class="metric">
+            <div class="lab">Residual density</div>
+            <div class="val" id="rho"></div>
+            <div class="sub">g cm⁻³ at STP, fertile start from Lee (2003)</div>
+          </div>
+          <div class="metric">
+            <div class="lab">Density contrast</div>
+            <div class="val" id="contrast"></div>
+            <div class="sub">versus fertile mantle / asthenosphere</div>
+          </div>
+          <div class="metric">
+            <div class="lab">Residue Mg#</div>
+            <div class="val" id="mgnum"></div>
+            <div class="sub">higher Mg#, less garnet and cpx</div>
+          </div>
+          <div class="metric">
+            <div class="lab">Melt extracted</div>
+            <div class="val" id="fval"></div>
+            <div class="sub">Katz et al. (2003) column, unless overridden</div>
+          </div>
+          <div class="metric">
+            <div class="lab">Depletion ≡ heating</div>
+            <div class="val" id="heat"></div>
+            <div class="sub">Schutt &amp; Lesher α at 4 GPa</div>
+          </div>
+          <div class="metric">
+            <div class="lab">Lee (2003) alternative</div>
+            <div class="val" id="lee"></div>
+            <div class="sub">xenolith ρ–Mg# curve, not used for the verdict</div>
+          </div>
+          <div class="metric">
+            <div class="lab">Compositionally buoyant?</div>
+            <div class="val" id="flag"></div>
+            <div class="sub">Yes if residue is ≥0.2% lighter than fertile mantle</div>
+          </div>
+        </div>
+
+        <div class="compare">
+          <div class="col" id="modern-box"></div>
+          <div class="col" id="archean-box"></div>
+        </div>
+        <div class="chart-wrap">
+          <svg class="chart" id="chart" role="img" aria-label="Density contrast versus melt fraction"></svg>
+        </div>
+      </section>
+    </div>
+
+    <div class="stack">
+      <section class="card explain">
+        <h2>What the sliders are showing</h2>
+        <p>
+          Fertile peridotite is a mix of olivine, orthopyroxene, clinopyroxene, and an Al-phase
+          (spinel or garnet). Melt prefers iron, calcium, and aluminum, so the leftover rock has a
+          higher Mg# and less of the dense minerals garnet and clinopyroxene. That is compositional
+          buoyancy: the residue is intrinsically lighter than the asthenosphere it came from, even
+          before you worry about temperature (Jordan 1978, 1988).
+        </p>
+        <p>
+          The Archean is the important case because ambient mantle potential temperature was about
+          150–250 °C higher than today (Herzberg, Condie &amp; Korenaga 2010). For the same lithosphere
+          thickness, melting started deeper and went further — typically ~30% melt and 25–35 km of
+          mafic crust, versus ~10% melt and ~7 km of modern MORB crust. The Archean residue is a
+          high-Mg# harzburgite; a modern residue of the same thickness is still closer to lherzolite.
+        </p>
+        <p>
+          Devolatilization is on the page so you can see that it is secondary. Water in olivine
+          expands the lattice a little (Smyth et al. 2006), and a few percent phlogopite or magnesite
+          is lighter than peridotite, so drying the rock makes it slightly denser, not lighter.
+          Peslier et al. (2010) argued that the real job of a dry cratonic root is viscosity, not
+          buoyancy. Move the volatile slider across its full range: the density change stays small
+          next to 20–30% melt extraction.
+        </p>
+        <p class="note">
+          Density versus melt fraction follows Schutt &amp; Lesher (2006) at 4 GPa, where they
+          report −1.14% at 20% melt — the largest depletion effect in their 1–7 GPa set. Lee (2003)
+          fitted xenolith densities to Mg# instead: ρ = −0.0144 Mg# + 4.66. The two curves disagree
+          in detail (Schutt &amp; Lesher find a weaker Fe-loss effect than Jordan 1979 and a stronger
+          role for mineral modes). This page uses Schutt &amp; Lesher because the control is melt
+          fraction. The Lee curve is plotted as a dashed alternative and is not used for the verdict.
+        </p>
+      </section>
+
+      <section class="card cite">
+        <h2>Sources used in the calculation</h2>
+        <ol>
+          <li>Jordan, T. H. (1978). Composition and development of the continental tectosphere. <em>Nature</em> 274, 544–548. Also Jordan (1988), <em>Journal of Petrology</em>, Special Lithosphere Issue.</li>
+          <li>Lee, C.-T. A. (2003). Compositional variation of density and seismic velocities in natural peridotites at STP conditions. <em>JGR</em> 108, 2441. Table 5: ρ = −0.0144 Mg# + 4.66.</li>
+          <li>Schutt, D. L., &amp; Lesher, C. E. (2006). Effects of melt depletion on the density and seismic velocity of garnet and spinel lherzolite. <em>JGR</em> 111, B05401. Primary Δρ(F) used here, 4 GPa tabulated value.</li>
+          <li>Katz, R. F., Spiegelman, M., &amp; Langmuir, C. H. (2003). A new parameterization of hydrous mantle melting. <em>G-Cubed</em> 4, 1073. Melt fraction, including the 2023 errata for temperature units and R<sub>cpx</sub>.</li>
+          <li>Herzberg, C., Condie, K., &amp; Korenaga, J. (2010). Thermal history of the Earth and its petrological expression. <em>EPSL</em> 292, 79–88. Modern T<sub>P</sub> ≈ 1350 °C; Archean ambient ≈ 1500–1600 °C; ~30% Archean melting.</li>
+          <li>Walter, M. J. (1998). Melting of garnet peridotite and the origin of komatiite and depleted lithosphere. <em>Journal of Petrology</em> 39, 29–60. Fertile KR4003 Mg# = 89.2.</li>
+          <li>Bernstein, S., Kelemen, P. B., &amp; Hanghøj, K. (2007). Consistent olivine Mg# in cratonic mantle reflects Archean melting to orthopyroxene exhaustion. <em>Geology</em> 35, 459–462. Mg# ≈ 92.8 at F ≈ 0.40.</li>
+          <li>Afonso, J. C., &amp; Schutt, D. L. (2012). The effects of polybaric partial melting on density and seismic velocities of mantle restites. <em>Lithos</em>. Mg# rises nearly linearly with F.</li>
+          <li>Smyth, J. R., Frost, D. J., Nestola, F., Holl, C. M., &amp; Bromiley, G. (2006). Olivine hydration in the deep upper mantle. <em>GRL</em> 33, L15301. 5000 ppm H<sub>2</sub>O ≡ ~240 °C of thermal expansion (Fei 1995).</li>
+          <li>Eeken, T., et al. (2018). Seismic evidence for a mid-lithospheric discontinuity in cratons. Hydrous-mineral mode scaling: 0.25 wt% H<sub>2</sub>O ≈ 13% hydrous assemblage.</li>
+          <li>Hirth, G., &amp; Kohlstedt, D. L. (1996). Water in the oceanic upper mantle. Ambient ~125 ± 75 ppm H<sub>2</sub>O.</li>
+          <li>Dasgupta, R., &amp; Hirschmann, M. M. (2010). The deep carbon cycle and melting in Earth’s interior. <em>EPSL</em>. DMM-like CO<sub>2</sub> of order 10<sup>2</sup> ppm.</li>
+          <li>Peslier, A. H., Woodland, A. B., Bell, D. R., &amp; Lazarov, M. (2010). Olivine water contents in the continental lithosphere and the longevity of cratons. <em>Nature</em> 467, 78–81. Dry olivine as a viscosity, not density, argument.</li>
+        </ol>
+      </section>
+    </div>
+
+    <footer>
+      Static page for GitHub Pages. Numbers update in the browser; there is no build step.
+      Teaching page, not a paper.
+    </footer>
+  </main>
+  <script src="js/science.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
